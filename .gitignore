@@ -1,0 +1,30 @@
+# Секреты и окружение
+.env
+*.env
+!.env.example
+
+# База данных TinyDB и бэкапы
+db/
+*.json.lock
+
+# Логи
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
