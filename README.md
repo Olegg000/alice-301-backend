@@ -42,33 +42,56 @@
 
 ## Стек
 
-- **FastAPI** + Uvicorn/Gunicorn — HTTP и WebSocket
+- **FastAPI** + Uvicorn — HTTP и WebSocket
 - **JWT** (python-jose) — авторизация агента и пользователей, access/refresh токены
 - **TinyDB** — лёгкое JSON-хранилище пользователей, токенов, сессий
 - **APScheduler** — фоновые задачи (бэкапы БД, очистка кодов/сессий, health-check соединений)
 - Собственные **middleware**: security-заголовки, rate limiting по IP, сбор метрик, логирование запросов
 - **Docker** / docker-compose для деплоя
 
-## Запуск
+## Быстрый старт
 
 ```bash
-# 1. Зависимости
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# 2. Конфигурация
-cp .env.example .env
-# отредактируйте .env: SECRET_KEY, YANDEX_CLIENT_ID/SECRET и т.д.
-
-# 3. Старт
-uvicorn main:app --host 0.0.0.0 --port 8000
-# Swagger (вне production): http://localhost:8000/docs
+docker compose up --build
 ```
 
-Через Docker:
+Больше ничего не нужно: `.env` не обязателен, `SECRET_KEY` генерируется на старте,
+данные ложатся в `./db`.
+
+- Swagger UI — `http://localhost:8000/docs`
+- Проверка живости — `http://localhost:8000/health`
+- OAuth-форма Яндекса — `http://localhost:8000/auth?client_id=demo&redirect_uri=http://localhost/cb&response_type=code&state=xyz`
+
+Если порт 8000 занят — `HOST_PORT=8001 docker compose up --build`.
+
+Боевой запуск отличается двумя вещами: `ENVIRONMENT=production` (скрывает `/docs`)
+и собственный `SECRET_KEY` вместе с реквизитами Яндекса в `.env` — образец в
+`.env.example`.
+
+### Без Docker
 
 ```bash
-docker compose up -d --build
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+ENVIRONMENT=development uvicorn main:app --port 8000
+```
+
+## Проверить руками
+
+```bash
+# завести пользователя
+curl -X POST http://localhost:8000/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"DemoPass123!"}'
+
+# пройти OAuth так, как это делает Яндекс: логин формой -> authorization code
+curl -i -X POST http://localhost:8000/auth/callback \
+  -d 'client_id=demo' -d 'redirect_uri=http://localhost/cb' -d 'state=xyz' \
+  -d 'username=demo' -d 'password=DemoPass123!'
+# 307 Location: http://localhost/cb?code=<CODE>&state=xyz
+
+# обменять код на Bearer для Smart Home API
+curl -X POST http://localhost:8000/auth/token -d 'code=<CODE>'
 ```
 
 ## Структура
@@ -84,13 +107,35 @@ docker compose up -d --build
 | `scheduler.py`          | Фоновые задачи: бэкапы, очистка, health-check, сбор статистики          |
 | `config.py`             | Настройки через pydantic-settings (читаются из `.env`)                  |
 
-## Основные эндпоинты
+## Эндпоинты
 
-- `POST /register`, `POST /token`, `POST /refresh` — регистрация и JWT
-- `GET /auth`, `POST /auth/callback`, `POST /auth/token` — OAuth-поток Яндекса
-- `GET /v1.0/user/devices`, `POST /v1.0/user/devices/query`, `POST /v1.0/user/devices/action` — Smart Home API
-- `WS /ws/agent/{token}` — канал к домашнему агенту
-- `GET /health`, `GET /admin/stats` — мониторинг
+Полная интерактивная версия — в Swagger UI на `/docs`.
+
+| Раздел | Метод | Путь | Что делает |
+| --- | --- | --- | --- |
+| Сервис | `GET` | `/` | Имя, версия, окружение |
+| Сервис | `GET` | `/health` | Состояние БД, WebSocket и планировщика |
+| Аккаунт | `POST` | `/register` | Регистрация, сразу отдаёт пару токенов |
+| Аккаунт | `POST` | `/token` | Вход по логину и паролю (OAuth2 password form) |
+| Аккаунт | `POST` | `/refresh` | Обновление access-токена по refresh |
+| Аккаунт | `POST` | `/change-password` | Смена пароля |
+| Аккаунт | `POST` | `/logout` | Завершение сессии |
+| Аккаунт | `GET` | `/me` | Профиль текущего пользователя |
+| Аккаунт | `GET` | `/me/sessions` | Активные сессии |
+| OAuth Яндекса | `GET` | `/auth` | Форма привязки аккаунта |
+| OAuth Яндекса | `POST` | `/auth/callback` | Выдаёт authorization code и редиректит |
+| OAuth Яндекса | `POST` | `/auth/token` | Меняет код на Bearer для Smart Home API |
+| Smart Home | `HEAD` | `/v1.0/` | Проба доступности, которую делает Яндекс |
+| Smart Home | `POST` | `/v1.0/user/unlink` | Отвязка аккаунта |
+| Smart Home | `GET` | `/v1.0/user/devices` | Список устройств пользователя |
+| Smart Home | `POST` | `/v1.0/user/devices/query` | Состояния устройств из кэша |
+| Smart Home | `POST` | `/v1.0/user/devices/action` | Команда с оптимистичным ответом |
+| Агент | `POST` | `/api/v1/user/devices` | Агент публикует свой список устройств |
+| Агент | `WS` | `/ws/agent/{token}` | Постоянный туннель «облако ↔ дом» |
+| Админ | `GET` | `/admin/stats` | Метрики сервиса и фоновых задач |
+| Админ | `GET` | `/admin/audit` | Журнал аудита |
+| Админ | `POST` | `/admin/tasks/{task_id}/run` | Ручной запуск фоновой задачи |
+| Админ | `POST` | `/admin/backup` | Резервная копия БД |
 
 ---
 

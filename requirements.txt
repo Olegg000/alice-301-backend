@@ -1,66 +1,20 @@
-# LOKAL Cloud Service - Production Requirements
-
-# ============ Core Framework ============
+# Только то, что реально импортируется кодом.
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# ============ Database ============
+# Хранилище
 tinydb==4.8.0
 
-# ============ Authentication & Security ============
+# JWT и пароли
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 python-dotenv==1.0.0
-cryptography==41.0.7
 
-# ============ WebSocket ============
-websockets==12.0
-
-# ============ Data Validation ============
+# Валидация и настройки
 pydantic==2.5.0
 pydantic-settings==2.1.0
-email-validator==2.1.0
 
-# ============ Utilities ============
-aiofiles==23.2.1
-python-dateutil==2.8.2
-
-# ============ Rate Limiting ============
-slowapi==0.1.9
-
-# ============ Monitoring & Logging ============
-python-json-logger==2.0.7
-
-# ============ Background Tasks ============
+# Фоновые задачи (бэкапы, очистка сессий)
 apscheduler==3.10.4
-argon2-cffi
-
-# ============ HTTP Client ============
-httpx==0.25.2
-
-# ============ Testing (optional, dev) ============
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.2  # for TestClient
-
-# ============ Development Tools ============
-black==23.12.1
-flake8==6.1.0
-mypy==1.7.1
-
-# ============ Production Deployment ============
-gunicorn==21.2.0
-supervisor==4.2.5
-
-# ============ Database Migrations (если нужен upgrade) ============
-# alembic==1.13.0  # Если перейдем на SQLAlchemy
-
-# ============ Caching (опционально) ============
-# redis==5.0.1
-# aioredis==2.0.1
-
-# ============ Message Queue (опционально для масштабирования) ============
-# celery==5.3.4
-# kombu==5.3.4

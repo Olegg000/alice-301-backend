@@ -1,27 +1,26 @@
-# docker-compose.yml для LOKAL Cloud Service
-
-version: '3.8'
-
 services:
   app:
-    # Указываем Docker Compose собрать образ из текущей директории
     build: .
-    
-    # Даем контейнеру постоянное имя
-    container_name: lokal-app
-    
-    # Всегда перезапускать, если не остановлен вручную
+    container_name: alice-301-backend
     restart: unless-stopped
-    
-    # Пробрасываем порты: <хост>:<контейнер>
-    # 127.0.0.1 ограничивает доступ к порту только с хост-машины
-    # (идеально для Nginx из другого LXC, если он обращается к хосту)
     ports:
-      - "8000:8000"
-    
-    # Пробрасываем папки (volumes) для сохранения данных
+      # Порт хоста занят? Запустите с HOST_PORT=8001 docker compose up.
+      - "${HOST_PORT:-8000}:8000"
+    environment:
+      # development открывает /docs и /redoc — для демо это и нужно.
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - YANDEX_REDIRECT_URI=${YANDEX_REDIRECT_URI:-http://localhost:8000/auth/callback}
+      # Пробрасываются с хоста или из .env, если заданы. SECRET_KEY без значения
+      # приложение сгенерирует само при старте.
+      - SECRET_KEY
+      - YANDEX_CLIENT_ID
+      - YANDEX_CLIENT_SECRET
     volumes:
-      # Папка с "базой данных"
       - ./db:/app/db
-      # Файл с секретным ключом
-      - ./.env:/app/.env
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -88,18 +88,34 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware для добавления security заголовков"""
-    
+
+    STRICT_CSP = "default-src 'self'"
+
+    # Две HTML-страницы тянут внешние ресурсы: Swagger UI берёт бандл с jsdelivr,
+    # OAuth-форма — шрифты с Google Fonts. Без послабления обе приезжают без стилей
+    # и скриптов. Всё остальное API остаётся на строгом default-src 'self'.
+    RELAXED_CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https://fastapi.tiangolo.com"
+    )
+
     async def dispatch(self, request: Request, call_next: Callable):
         response = await call_next(request)
-        
+
+        path = request.url.path
+        needs_relaxed = path == "/auth" or path.startswith(("/docs", "/redoc"))
+
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        response.headers["Content-Security-Policy"] = self.RELAXED_CSP if needs_relaxed else self.STRICT_CSP
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
+
         return response
 
 

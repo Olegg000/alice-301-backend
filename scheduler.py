@@ -39,6 +39,10 @@ class BackgroundTasksManager:
         self.scheduler.start()
         logger.info("Background tasks scheduler started")
     
+    def is_running(self) -> bool:
+        """Работает ли планировщик — используется в /health"""
+        return self.scheduler.running
+
     async def stop(self):
         """Остановка планировщика"""
         if self.scheduler.running:

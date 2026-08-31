@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any, Annotated
 from datetime import datetime
+from html import escape
 import logging
 import json
 import uuid
@@ -65,7 +66,7 @@ async def lifespan(app: FastAPI):
     yield  # <-- Приложение работает здесь
 
     logger.info("Shutting down services...")
-    background_tasks.stop()
+    await background_tasks.stop()
     await ws_manager.stop()
     db.close()
     logger.info("Shutdown complete")
@@ -291,51 +292,100 @@ async def oauth_authorize(
         state: str = Query(...)
 ):
     """OAuth авторизация для Яндекса"""
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>LOKAL - Авторизация</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-                   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                   min-height: 100vh; display: flex; align-items: center; justify-content: center; }}
-            .container {{ background: white; padding: 40px; border-radius: 16px; 
-                         box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%; }}
-            h2 {{ color: #333; margin-bottom: 10px; font-size: 28px; }}
-            p {{ color: #666; margin-bottom: 30px; }}
-            input {{ width: 100%; padding: 14px; margin: 10px 0; border: 2px solid #e0e0e0; 
-                    border-radius: 8px; font-size: 14px; transition: all 0.3s; }}
-            input:focus {{ border-color: #667eea; outline: none; }}
-            button {{ width: 100%; padding: 14px; background: #667eea; color: white; border: none; 
-                     border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; 
-                     transition: all 0.3s; margin-top: 10px; }}
-            button:hover {{ background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }}
-            .logo {{ text-align: center; margin-bottom: 20px; }}
-            .logo svg {{ width: 60px; height: 60px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#667eea" stroke-width="2"/></svg>
-            </div>
-            <h2>🏠 LOKAL</h2>
-            <p>Войдите для подключения к Яндекс Умному Дому</p>
-            <form method="post" action="/auth/callback">
-                <input type="hidden" name="client_id" value="{client_id}">
-                <input type="hidden" name="redirect_uri" value="{redirect_uri}">
-                <input type="hidden" name="state" value="{state}">
-                <input type="text" name="username" placeholder="Имя пользователя" required autofocus>
-                <input type="password" name="password" placeholder="Пароль" required>
-                <button type="submit">Войти</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    """
+    # Параметры приходят из запроса Яндекса и попадают в HTML — экранируем,
+    # иначе через state или redirect_uri можно вставить разметку на страницу с паролем.
+    safe = {k: escape(v, quote=True) for k, v in {
+        "client_id": client_id, "redirect_uri": redirect_uri, "state": state
+    }.items()}
+
+    html = f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>LOKAL — авторизация</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {{
+  --lv-paper: #f5f3ee; --lv-surface: #ffffff; --lv-sunken: #ebe8e1;
+  --lv-ink: #17191c; --lv-ink-soft: #4d5257; --lv-ink-faint: #7d8388;
+  --lv-line: #dcd8cf; --lv-accent: #9a6c17; --lv-accent-bg: #f6ecd7; --lv-link: #145e6b;
+  --lv-display: 'Unbounded', system-ui, sans-serif;
+  --lv-body: 'Golos Text', system-ui, -apple-system, sans-serif;
+  --lv-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --lv-radius: 10px;
+  --lv-shadow: 0 1px 2px rgba(23,25,28,.05), 0 8px 24px -12px rgba(23,25,28,.18);
+}}
+@media (prefers-color-scheme: dark) {{
+  :root {{
+    --lv-paper: #121417; --lv-surface: #1a1e22; --lv-sunken: #23282e;
+    --lv-ink: #eceef0; --lv-ink-soft: #b0b7bd; --lv-ink-faint: #7f878e;
+    --lv-line: #2c3238; --lv-accent: #e0b354; --lv-accent-bg: #302713; --lv-link: #5cc4d4;
+    --lv-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }}
+}}
+* {{ margin: 0; padding: 0; box-sizing: border-box; }}
+body {{
+  font-family: var(--lv-body); background: var(--lv-paper); color: var(--lv-ink);
+  line-height: 1.55; min-height: 100vh;
+  display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+}}
+.card {{
+  background: var(--lv-surface); border: 1px solid var(--lv-line);
+  border-radius: var(--lv-radius); box-shadow: var(--lv-shadow);
+  padding: clamp(1.75rem, 5vw, 2.5rem); max-width: 26rem; width: 100%;
+}}
+.label {{
+  font-family: var(--lv-mono); font-size: .82rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--lv-accent); margin-bottom: .6rem;
+}}
+h1 {{
+  font-family: var(--lv-display); font-weight: 700; font-size: 1.7rem;
+  letter-spacing: -.02em; line-height: 1.15; margin-bottom: .4rem;
+}}
+p.sub {{ color: var(--lv-ink-soft); margin-bottom: 1.5rem; font-size: .95rem; }}
+label.field {{ display: block; font-size: .82rem; color: var(--lv-ink-soft); margin-bottom: .3rem; }}
+input[type=text], input[type=password] {{
+  width: 100%; padding: .8rem .9rem; margin-bottom: 1rem;
+  border: 1px solid var(--lv-line); border-radius: var(--lv-radius);
+  background: var(--lv-paper); color: var(--lv-ink);
+  font-family: var(--lv-body); font-size: 1rem;
+}}
+input:focus-visible, button:focus-visible {{ outline: 2px solid var(--lv-accent); outline-offset: 2px; }}
+button {{
+  width: 100%; padding: .85rem; border: 1px solid var(--lv-accent);
+  border-radius: var(--lv-radius); background: var(--lv-accent-bg); color: var(--lv-ink);
+  font-family: var(--lv-body); font-size: 1rem; font-weight: 600; cursor: pointer;
+}}
+button:hover {{ background: var(--lv-accent); color: var(--lv-paper); }}
+.foot {{
+  margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--lv-line);
+  font-size: .82rem; color: var(--lv-ink-faint);
+}}
+.foot code {{ font-family: var(--lv-mono); color: var(--lv-ink-soft); }}
+</style>
+</head>
+<body>
+  <main class="card">
+    <p class="label">Яндекс Умный дом · OAuth</p>
+    <h1>LOKAL</h1>
+    <p class="sub">Войдите, чтобы связать аккаунт с навыком Алисы.</p>
+    <form method="post" action="/auth/callback">
+      <input type="hidden" name="client_id" value="{safe['client_id']}">
+      <input type="hidden" name="redirect_uri" value="{safe['redirect_uri']}">
+      <input type="hidden" name="state" value="{safe['state']}">
+      <label class="field" for="u">Имя пользователя</label>
+      <input id="u" type="text" name="username" required autofocus autocomplete="username">
+      <label class="field" for="p">Пароль</label>
+      <input id="p" type="password" name="password" required autocomplete="current-password">
+      <button type="submit">Войти</button>
+    </form>
+    <p class="foot">Аккаунт заводится через <code>POST /register</code>.</p>
+  </main>
+</body>
+</html>"""
     return HTMLResponse(content=html)
 
 
@@ -371,7 +421,6 @@ async def oauth_token(request: Request):
         raise HTTPException(status_code=400, detail="Invalid authorization code")
 
     # Генерируем токен для Яндекса
-    import uuid
     yandex_token = str(uuid.uuid4())
     db.save_yandex_token(username, yandex_token)
 
