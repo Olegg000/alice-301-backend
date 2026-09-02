@@ -1,0 +1,376 @@
+/* «Ночной дом» — тёмная панель, в которой свет комнат и есть интерфейс.
+   Оформление намеренно одно-тёмное: панель показывает дом вечером. */
+
+:root {
+  --night: #080b11;
+  --panel: #10151d;
+  --raised: #172029;
+  --line: #232d3a;
+  --line-soft: #1a222c;
+
+  --ink: #e8eef6;
+  --ink-soft: #9dabbb;
+  --ink-faint: #67737f;
+
+  --lamp: #ffb04a;
+  --lamp-hot: #ffd08a;
+  --lamp-deep: #d9761d;
+  --cool: #4fb6c8;
+  --off-fill: #141c25;
+
+  --display: 'Unbounded', system-ui, sans-serif;
+  --body: 'Golos Text', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 18% -10%, #12202e 0%, transparent 60%),
+    radial-gradient(900px 600px at 110% 110%, #1b1420 0%, transparent 55%),
+    var(--night);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; border-radius: 6px; }
+
+.mono { font-family: var(--mono); }
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ── каркас ─────────────────────────────────────────── */
+.app {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 22px clamp(14px, 3vw, 32px) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 100%;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.brand {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand .bulb {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--lamp);
+  box-shadow: 0 0 12px 3px rgba(255, 176, 74, .65);
+}
+.brand small {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+.top .spacer { margin-left: auto; }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, .85fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1040px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+.card {
+  background: linear-gradient(180deg, var(--raised), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 24px 60px -40px #000;
+}
+.card > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.card > header h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: .01em;
+}
+
+/* ── план квартиры ──────────────────────────────────── */
+.plan-card { overflow: hidden; }
+.plan-wrap { padding: clamp(10px, 2vw, 22px); }
+.plan { width: 100%; height: auto; display: block; }
+
+.room-shape {
+  /* заливка приходит атрибутом (градиент); CSS перекрывает её только для включённой комнаты */
+  stroke: #2c3947;
+  stroke-width: 2;
+  transition: fill .55s ease, stroke .55s ease;
+  cursor: pointer;
+}
+.room.is-on .room-shape {
+  fill: #241d16;
+  stroke: #5a4527;
+}
+.room:hover .room-shape { stroke: #6d7d8d; }
+.room.is-on:hover .room-shape { stroke: var(--lamp-deep); }
+
+.room-glow {
+  opacity: 0;
+  transition: opacity .6s ease;
+  pointer-events: none;
+}
+.room.is-on .room-glow { opacity: 1; }
+
+.room-name {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 500;
+  fill: var(--ink-faint);
+  transition: fill .55s ease;
+  pointer-events: none;
+}
+.room.is-on .room-name { fill: var(--lamp-hot); }
+
+.room-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  fill: #4a545f;
+  transition: fill .55s ease;
+  pointer-events: none;
+}
+.room.is-on .room-meta { fill: #a87c45; }
+
+.plan-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 0 20px 18px;
+  align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-faint); }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; background: #2c3947; }
+.legend-dot.on { background: var(--lamp); box-shadow: 0 0 10px 2px rgba(255, 176, 74, .5); }
+
+/* ── статус ─────────────────────────────────────────── */
+.status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 2px;
+  background: var(--line-soft);
+  border-radius: 0 0 15px 15px;
+  overflow: hidden;
+}
+.status div { background: var(--panel); padding: 13px 16px; }
+.status b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.status b.lit { color: var(--lamp); }
+.status b.cool { color: var(--cool); }
+.status span { font-size: 11.5px; color: var(--ink-faint); }
+
+/* ── устройства ─────────────────────────────────────── */
+.devices { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.device {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 11px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 11px;
+  cursor: pointer;
+  text-align: left;
+  transition: background .18s ease;
+}
+.device:hover { background: #1a232e; }
+.device .knob {
+  flex: none;
+  width: 40px; height: 24px;
+  border-radius: 999px;
+  background: #202a35;
+  border: 1px solid #2e3a47;
+  position: relative;
+  transition: background .3s ease, border-color .3s ease;
+}
+.device .knob::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #6d7a87;
+  transition: transform .3s cubic-bezier(.4, 1.4, .5, 1), background .3s ease, box-shadow .3s ease;
+}
+.device.is-on .knob { background: #4a3418; border-color: var(--lamp-deep); }
+.device.is-on .knob::after {
+  transform: translateX(16px);
+  background: var(--lamp);
+  box-shadow: 0 0 12px 2px rgba(255, 176, 74, .7);
+}
+.device .name { flex: 1; min-width: 0; }
+.device .name b { display: block; font-weight: 500; font-size: 14.5px; }
+.device .name span { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+.device.is-on .name b { color: var(--lamp-hot); }
+
+/* ── голосовая лента ────────────────────────────────── */
+.voice { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.voice-log { display: flex; flex-direction: column; gap: 10px; min-height: 132px; }
+.turn { display: flex; flex-direction: column; gap: 6px; animation: rise .45s ease both; }
+.said, .replied {
+  padding: 9px 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  max-width: 92%;
+}
+.said {
+  align-self: flex-end;
+  background: #1d2733;
+  border: 1px solid var(--line);
+  border-bottom-right-radius: 4px;
+}
+.replied {
+  align-self: flex-start;
+  background: linear-gradient(180deg, #33240f, #241a0c);
+  border: 1px solid #4a3418;
+  border-bottom-left-radius: 4px;
+  color: var(--lamp-hot);
+}
+.replied.thinking { color: var(--ink-faint); background: #161e28; border-color: var(--line); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.voice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.phrase-btn {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #161e28;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color .2s ease, color .2s ease, background .2s ease;
+}
+.phrase-btn:hover:not(:disabled) { border-color: var(--lamp-deep); color: var(--lamp-hot); background: #1e1a13; }
+.phrase-btn:disabled { opacity: .45; cursor: default; }
+
+/* ── подключение ────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: .06em;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #141c25;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cool); }
+.pill.live .dot { background: #56d38a; box-shadow: 0 0 9px 2px rgba(86, 211, 138, .5); }
+
+.connect { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.connect p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+.connect label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ink-faint); }
+.connect input {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #0e141b;
+  color: var(--ink);
+}
+.connect input::placeholder { color: #4a545f; }
+.connect .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  padding: 10px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--lamp-deep);
+  background: linear-gradient(180deg, #3b2a13, #2a1e0e);
+  color: var(--lamp-hot);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn.ghost { border-color: var(--line); background: #141c25; color: var(--ink-soft); }
+.error { font-size: 12.5px; color: #f0907f; margin: 0; }
+
+footer.foot {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+footer.foot a { color: var(--cool); text-decoration: none; }
+footer.foot a:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* мебель на плане: тонкие линии, теплеют вместе со светом */
+.furniture {
+  fill: none;
+  stroke: #2b3744;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: stroke .55s ease, opacity .55s ease;
+  opacity: .85;
+}
+.room.is-on .furniture { stroke: #8a6a3c; opacity: 1; }
+.furniture .rug { stroke-dasharray: 5 7; stroke: #26313d; }
+.room.is-on .furniture .rug { stroke: #6d5330; }
+.furniture .door { stroke: #223040; stroke-width: 1.5; stroke-dasharray: 4 5; }
+.room.is-on .furniture .door { stroke: #5d472a; }
+
+@media (max-width: 560px) {
+  /* четыре показателя в два ряда — иначе последняя ячейка остаётся пустой */
+  .status { grid-template-columns: repeat(2, 1fr); }
+}

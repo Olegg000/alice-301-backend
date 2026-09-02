@@ -28,3 +28,8 @@ env/
 
 # OS
 .DS_Store
+
+# Фронтенд панели
+web/node_modules/
+web/dist/
+*.tsbuildinfo
