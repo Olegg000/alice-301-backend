@@ -448,3 +448,8 @@ footer.foot a:hover { text-decoration: underline; }
   place-items: center;
 }
 .device .chart-btn:hover { border-color: var(--line); background: #141c25; color: var(--lamp-hot); }
+
+.stat-row { grid-template-columns: repeat(4, 1fr); }
+.stat-row b.muted { color: var(--ink-soft); }
+.stats-note { margin: -6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-faint); }
+@media (max-width: 560px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }

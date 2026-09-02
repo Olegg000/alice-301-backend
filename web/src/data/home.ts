@@ -95,6 +95,9 @@ export type CommandSplit = { alice: number; local: number; cloud: number }
 export type DeviceStats = {
   uptimePct: number
   avgPingMs: number
+  /** служебные проверки связи за сутки — считаются отдельно от команд:
+   *  если смешать их с командами, счётчик разрастается в сотни раз */
+  healthChecks: number
   /** пинг за последние 24 часа, мс */
   ping24h: number[]
   /** сколько команд пришло в каждый час суток */
@@ -129,6 +132,7 @@ function makeStats(seed: number, base: { uptime: number; ping: number; commands:
   return {
     uptimePct: base.uptime,
     avgPingMs: Math.round(ping24h.reduce((sum, p) => sum + p, 0) / ping24h.length),
+    healthChecks: Math.round((1440 * base.uptime) / 100),
     ping24h,
     hourly,
     on: split(onTotal),

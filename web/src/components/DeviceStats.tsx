@@ -83,7 +83,16 @@ export function DeviceStats({ device, onClose }: Props) {
             <b className="mono">{totalCommands}</b>
             <span>команд за сутки</span>
           </div>
+          <div>
+            <b className="mono muted">{stats.healthChecks}</b>
+            <span>проверок связи</span>
+          </div>
         </div>
+
+        <p className="stats-note">
+          Проверки связи считаются отдельно от команд: агент опрашивает лампу раз в минуту,
+          и если смешать опросы с нажатиями, счётчик команд вырастает в сотни раз.
+        </p>
 
         <div className="chart">
           <div className="chart-head">
