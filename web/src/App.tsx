@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FloorPlan } from './components/FloorPlan'
 import { VoicePanel, type Turn } from './components/VoicePanel'
-import { DEVICES, INITIAL_STATE, ROOMS, type VoiceScript } from './data/home'
+import { DeviceStats } from './components/DeviceStats'
+import { DEVICES, INITIAL_STATE, ROOMS, type Device, type VoiceScript } from './data/home'
 import { DemoBackend, LiveBackend, type DeviceState, type HomeBackend } from './lib/api'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -16,6 +17,11 @@ export default function App() {
   const [log, setLog] = useState<Turn[]>([])
   const [busy, setBusy] = useState(false)
   const [showConnect, setShowConnect] = useState(false)
+  // ?device=<id> открывает телеметрию сразу — такой ссылкой удобно делиться
+  const [selected, setSelected] = useState<Device | null>(() => {
+    const id = new URLSearchParams(window.location.search).get('device')
+    return DEVICES.find(device => device.id === id) ?? null
+  })
   const [error, setError] = useState<string | null>(null)
   const [url, setUrl] = useState('')
   const [token, setToken] = useState('')
@@ -220,6 +226,8 @@ export default function App() {
             </section>
           )}
 
+          {selected && <DeviceStats device={selected} onClose={() => setSelected(null)} />}
+
           <section className="card">
             <header>
               <h2>Светильники</h2>
@@ -232,20 +240,33 @@ export default function App() {
                 const on = Boolean(state[device.id])
                 const room = ROOMS.find(r => r.id === device.roomId)
                 return (
-                  <button
-                    key={device.id}
-                    className={`device${on ? ' is-on' : ''}`}
-                    onClick={() => void applyToDevice(device.id, !on)}
-                    aria-pressed={on}
-                  >
-                    <span className="knob" />
-                    <span className="name">
-                      <b>{device.name}</b>
-                      <span>
-                        {room?.name ?? '—'} · {device.model}
+                  <div key={device.id} className={`device${on ? ' is-on' : ''}`}>
+                    <button
+                      className="device-main"
+                      onClick={() => void applyToDevice(device.id, !on)}
+                      aria-pressed={on}
+                    >
+                      <span className="knob" />
+                      <span className="name">
+                        <b>{device.name}</b>
+                        <span>
+                          {room?.name ?? '—'} · {device.model}
+                        </span>
                       </span>
-                    </span>
-                  </button>
+                    </button>
+                    <button
+                      className="chart-btn"
+                      onClick={() => setSelected(device)}
+                      aria-label={`Телеметрия: ${device.name}`}
+                      title="Телеметрия"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true">
+                        <rect x="1" y="8" width="3" height="6" rx="1" fill="currentColor" />
+                        <rect x="6" y="4" width="3" height="10" rx="1" fill="currentColor" />
+                        <rect x="11" y="1" width="3" height="13" rx="1" fill="currentColor" />
+                      </svg>
+                    </button>
+                  </div>
                 )
               })}
             </div>

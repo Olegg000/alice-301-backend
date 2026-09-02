@@ -211,15 +211,24 @@ button { font: inherit; color: inherit; }
 .device {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 4px;
   width: 100%;
+  padding: 0 8px 0 0;
+  border-radius: 11px;
+  transition: background .18s ease;
+}
+.device-main {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex: 1;
+  min-width: 0;
   padding: 11px 12px;
   background: transparent;
   border: 0;
   border-radius: 11px;
   cursor: pointer;
   text-align: left;
-  transition: background .18s ease;
 }
 .device:hover { background: #1a232e; }
 .device .knob {
@@ -374,3 +383,68 @@ footer.foot a:hover { text-decoration: underline; }
   /* четыре показателя в два ряда — иначе последняя ячейка остаётся пустой */
   .status { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── телеметрия устройства ──────────────────────────── */
+.card > header .close {
+  border: 1px solid var(--line);
+  background: #141c25;
+  color: var(--ink-faint);
+  border-radius: 8px;
+  width: 28px; height: 28px;
+  cursor: pointer;
+  line-height: 1;
+}
+.card > header .close:hover { color: var(--ink); border-color: #3a4652; }
+
+.stats { padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 20px; }
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.stat-row b { display: block; font-size: 19px; color: var(--lamp); font-variant-numeric: tabular-nums; }
+.stat-row span { font-size: 11.5px; color: var(--ink-faint); }
+
+.chart-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.chart-range { margin-left: auto; font-size: 11.5px; color: var(--ink-faint); }
+.spark { width: 100%; height: 64px; display: block; overflow: visible; }
+.spark polyline {
+  fill: none;
+  stroke: var(--cool);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
+.bars span {
+  flex: 1;
+  background: linear-gradient(180deg, var(--lamp), var(--lamp-deep));
+  border-radius: 3px 3px 1px 1px;
+  min-width: 0;
+  opacity: .85;
+}
+
+.split-head { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; color: var(--ink-soft); margin-bottom: 7px; }
+.split-head b { margin-left: auto; color: var(--ink); }
+.split-bar { display: flex; height: 9px; border-radius: 999px; overflow: hidden; background: #1b242f; }
+.split-bar span { display: block; }
+.src-alice { background: #c96de0; }
+.split-bar .src-local { background: #4ec98a; }
+.split-bar .src-cloud { background: var(--cool); }
+.split-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 9px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--ink-faint); }
+.split-legend li { display: flex; align-items: center; gap: 6px; }
+.split-legend i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+.split-legend i.src-local { background: #4ec98a; }
+.split-legend i.src-cloud { background: var(--cool); }
+.split-legend b { color: var(--ink-soft); }
+
+.device .chart-btn {
+  flex: none;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.device .chart-btn:hover { border-color: var(--line); background: #141c25; color: var(--lamp-hot); }

@@ -87,3 +87,61 @@ const EVENING = new Set(['hl-light', 'lv-floor', 'kt-strip'])
 export const INITIAL_STATE: Record<string, boolean> = Object.fromEntries(
   DEVICES.map(d => [d.id, EVENING.has(d.id)]),
 )
+
+/** Телеметрия устройства — то же, что собирает десктопная панель агента:
+ *  uptime, пинг, разбивка команд по источнику и активность по часам. */
+export type CommandSplit = { alice: number; local: number; cloud: number }
+
+export type DeviceStats = {
+  uptimePct: number
+  avgPingMs: number
+  /** пинг за последние 24 часа, мс */
+  ping24h: number[]
+  /** сколько команд пришло в каждый час суток */
+  hourly: number[]
+  on: CommandSplit
+  off: CommandSplit
+}
+
+/** Детерминированный генератор: у каждого устройства свой,
+ *  но стабильный между перезагрузками профиль нагрузки. */
+function makeStats(seed: number, base: { uptime: number; ping: number; commands: number }): DeviceStats {
+  let value = seed
+  const next = () => {
+    value = (value * 1103515245 + 12345) % 2147483648
+    return value / 2147483648
+  }
+  const ping24h = Array.from({ length: 24 }, () => Math.round(base.ping * (0.72 + next() * 0.66)))
+  // Люди щёлкают светом утром и вечером — активность повторяет этот ритм.
+  const hourly = Array.from({ length: 24 }, (_, hour) => {
+    const morning = Math.exp(-((hour - 8) ** 2) / 6)
+    const evening = Math.exp(-((hour - 21) ** 2) / 8)
+    return Math.round(base.commands * (morning + evening * 1.4) * (0.6 + next() * 0.8))
+  })
+  const total = hourly.reduce((sum, count) => sum + count, 0)
+  const onTotal = Math.round(total * 0.52)
+  const offTotal = total - onTotal
+  const split = (amount: number): CommandSplit => {
+    const alice = Math.round(amount * (0.5 + next() * 0.2))
+    const local = Math.round((amount - alice) * (0.55 + next() * 0.25))
+    return { alice, local, cloud: Math.max(0, amount - alice - local) }
+  }
+  return {
+    uptimePct: base.uptime,
+    avgPingMs: Math.round(ping24h.reduce((sum, p) => sum + p, 0) / ping24h.length),
+    ping24h,
+    hourly,
+    on: split(onTotal),
+    off: split(offTotal),
+  }
+}
+
+export const DEVICE_STATS: Record<string, DeviceStats> = {
+  'lv-ceiling': makeStats(11, { uptime: 99.4, ping: 38, commands: 9 }),
+  'lv-floor': makeStats(23, { uptime: 98.1, ping: 44, commands: 6 }),
+  'bd-sconce': makeStats(37, { uptime: 99.8, ping: 31, commands: 7 }),
+  'kt-strip': makeStats(41, { uptime: 97.2, ping: 52, commands: 12 }),
+  'hl-light': makeStats(59, { uptime: 99.9, ping: 27, commands: 15 }),
+  'bt-light': makeStats(67, { uptime: 99.1, ping: 35, commands: 8 }),
+  'st-lamp': makeStats(83, { uptime: 96.5, ping: 61, commands: 5 }),
+}
