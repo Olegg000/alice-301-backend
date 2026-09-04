@@ -189,4 +189,6 @@ curl -X POST http://localhost:8000/auth/token -d 'code=<CODE>'
 
 ---
 
-Студия Лендвис · [landvis.ru](https://landvis.ru)
+**Студия Лендвис** — разработка сложных IT-продуктов.
+
+[lendvis.ru](https://lendvis.ru) · [hello@lendvis.ru](mailto:hello@lendvis.ru) · [Telegram](https://t.me/lendvis)
